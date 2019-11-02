@@ -1,7 +1,8 @@
-import * as createHash from 'create-hash';
+import * as CryptoJs from 'crypto-js';
+//import * as createHash from 'create-hash';
 import { pbkdf2, pbkdf2Sync } from 'pbkdf2';
-import * as randomBytes from 'randombytes';
 import { _default as _DEFAULT_WORDLIST, wordlists } from './_wordlists';
+import {WordArray} from "crypto-js";
 
 let DEFAULT_WORDLIST: string[] | undefined = _DEFAULT_WORDLIST;
 
@@ -25,12 +26,23 @@ function bytesToBinary(bytes: number[]): string {
   return bytes.map(x => lpad(x.toString(2), '0', 8)).join('');
 }
 
+function toWordArray (buf: Buffer) {
+  return CryptoJs.lib.WordArray.create(buf)
+}
+
+function toBuffer ( wa: WordArray|string) {
+  return Buffer.from(wa.toString(CryptoJs.enc.Hex), 'hex')
+}
+
+function random (len: number) {
+  return toBuffer(CryptoJs.lib.WordArray.random(len))
+}
+
 function deriveChecksumBits(entropyBuffer: Buffer): string {
   const ENT = entropyBuffer.length * 8;
   const CS = ENT / 32;
-  const hash = createHash('sha256')
-    .update(entropyBuffer)
-    .digest();
+  // const hash = createHash('sha256')
+  const hash = toBuffer(CryptoJs.SHA256(toWordArray(entropyBuffer)));
 
   return bytesToBinary(Array.from(hash)).slice(0, CS);
 }
@@ -158,7 +170,7 @@ export function generateMnemonic(
 ): string {
   strength = strength || 128;
   if (strength % 32 !== 0) throw new TypeError(INVALID_ENTROPY);
-  rng = rng || randomBytes;
+  rng = rng || random;
 
   return entropyToMnemonic(rng(strength / 8), wordlist);
 }

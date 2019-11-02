@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const createHash = require("create-hash");
+const CryptoJs = require("crypto-js");
+//import * as createHash from 'create-hash';
 const pbkdf2_1 = require("pbkdf2");
-const randomBytes = require("randombytes");
 const _wordlists_1 = require("./_wordlists");
 let DEFAULT_WORDLIST = _wordlists_1._default;
 const INVALID_MNEMONIC = 'Invalid mnemonic';
@@ -21,12 +21,20 @@ function binaryToByte(bin) {
 function bytesToBinary(bytes) {
     return bytes.map(x => lpad(x.toString(2), '0', 8)).join('');
 }
+function toWordArray(buf) {
+    return CryptoJs.lib.WordArray.create(buf);
+}
+function toBuffer(wa) {
+    return Buffer.from(wa.toString(CryptoJs.enc.Hex), 'hex');
+}
+function random(len) {
+    return toBuffer(CryptoJs.lib.WordArray.random(len));
+}
 function deriveChecksumBits(entropyBuffer) {
     const ENT = entropyBuffer.length * 8;
     const CS = ENT / 32;
-    const hash = createHash('sha256')
-        .update(entropyBuffer)
-        .digest();
+    // const hash = createHash('sha256')
+    const hash = toBuffer(CryptoJs.SHA256(toWordArray(entropyBuffer)));
     return bytesToBinary(Array.from(hash)).slice(0, CS);
 }
 function salt(password) {
@@ -123,7 +131,7 @@ function generateMnemonic(strength, rng, wordlist) {
     strength = strength || 128;
     if (strength % 32 !== 0)
         throw new TypeError(INVALID_ENTROPY);
-    rng = rng || randomBytes;
+    rng = rng || random;
     return entropyToMnemonic(rng(strength / 8), wordlist);
 }
 exports.generateMnemonic = generateMnemonic;
