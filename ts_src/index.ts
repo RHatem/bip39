@@ -1,8 +1,9 @@
 import * as CryptoJs from 'crypto-js';
-//import * as createHash from 'create-hash';
+// import * as createHash from 'create-hash';
 // import { pbkdf2, pbkdf2Sync } from 'pbkdf2';
+import { LibWordArray, WordArray } from 'crypto-js';
+import PBKDF2 from 'crypto-js/pbkdf2';
 import { _default as _DEFAULT_WORDLIST, wordlists } from './_wordlists';
-import {WordArray} from "crypto-js";
 
 let DEFAULT_WORDLIST: string[] | undefined = _DEFAULT_WORDLIST;
 
@@ -26,16 +27,16 @@ function bytesToBinary(bytes: number[]): string {
   return bytes.map(x => lpad(x.toString(2), '0', 8)).join('');
 }
 
-function toWordArray (buf: Buffer) {
-  return CryptoJs.lib.WordArray.create(buf)
+function toWordArray(buf: Buffer): LibWordArray {
+  return CryptoJs.lib.WordArray.create(buf);
 }
 
-function toBuffer ( wa: WordArray|string) {
-  return Buffer.from(wa.toString(CryptoJs.enc.Hex), 'hex')
+function toBuffer(wa: WordArray | string): Buffer {
+  return Buffer.from(wa.toString(CryptoJs.enc.Hex), 'hex');
 }
 
-function random (len: number) {
-  return toBuffer(CryptoJs.lib.WordArray.random(len))
+function random(len: number): Buffer {
+  return toBuffer(CryptoJs.lib.WordArray.random(len));
 }
 
 function deriveChecksumBits(entropyBuffer: Buffer): string {
@@ -64,10 +65,13 @@ export function mnemonicToSeedSync(
     'utf8',
   );
 
-  // var userHash = CryptoJS.PBKDF2(password, salt, { keySize: 512/32, iterations: iterations });
-  return toBuffer(CryptoJs.PBKDF2(toWordArray(mnemonicBuffer), toWordArray(saltBuffer),
-      { keySize: 64, iteration: 2048, hasher: CryptoJs.SHA512 }))
-  // return pbkdf2Sync(mnemonicBuffer, saltBuffer, 2048, 64, 'sha512');
+  return toBuffer(PBKDF2(toWordArray(mnemonicBuffer), toWordArray(saltBuffer), {
+      keySize: 512 / 32,
+      iterations: 2048,
+      hasher: CryptoJs.algo.SHA512,
+    }));
+  // const res2 = pbkdf2Sync(mnemonicBuffer, saltBuffer, 2048, 64, 'sha512').toString('hex');
+  // return Buffer.from(res1 || res2, 'hex');
 }
 
 export function mnemonicToSeed(
@@ -85,9 +89,18 @@ export function mnemonicToSeed(
           salt((password || '').normalize('NFKD')),
           'utf8',
         );
-        const res = toBuffer(CryptoJs.PBKDF2(toWordArray(mnemonicBuffer), toWordArray(saltBuffer),
-            { keySize: 64, iteration: 2048, hasher: CryptoJs.SHA512 }))
-        resolve(res)
+        const res = toBuffer(
+          CryptoJs.PBKDF2(
+            toWordArray(mnemonicBuffer),
+            toWordArray(saltBuffer),
+            {
+              keySize: 512 / 32,
+              iterations: 2048,
+              hasher: CryptoJs.algo.SHA512,
+            },
+          ),
+        );
+        resolve(res);
         // pbkdf2(mnemonicBuffer, saltBuffer, 2048, 64, 'sha512', (err, data) => {
         //   if (err) return reject(err);
         //   else return resolve(data);

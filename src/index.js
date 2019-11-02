@@ -1,8 +1,17 @@
 "use strict";
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const CryptoJs = require("crypto-js");
-//import * as createHash from 'create-hash';
-const pbkdf2_1 = require("pbkdf2");
+const CryptoJs = __importStar(require("crypto-js"));
+const pbkdf2_1 = __importDefault(require("crypto-js/pbkdf2"));
 const _wordlists_1 = require("./_wordlists");
 let DEFAULT_WORDLIST = _wordlists_1._default;
 const INVALID_MNEMONIC = 'Invalid mnemonic';
@@ -43,7 +52,13 @@ function salt(password) {
 function mnemonicToSeedSync(mnemonic, password) {
     const mnemonicBuffer = Buffer.from((mnemonic || '').normalize('NFKD'), 'utf8');
     const saltBuffer = Buffer.from(salt((password || '').normalize('NFKD')), 'utf8');
-    return pbkdf2_1.pbkdf2Sync(mnemonicBuffer, saltBuffer, 2048, 64, 'sha512');
+    return toBuffer(pbkdf2_1.default(toWordArray(mnemonicBuffer), toWordArray(saltBuffer), {
+        keySize: 512 / 32,
+        iterations: 2048,
+        hasher: CryptoJs.algo.SHA512,
+    }));
+    // const res2 = pbkdf2Sync(mnemonicBuffer, saltBuffer, 2048, 64, 'sha512').toString('hex');
+    // return Buffer.from(res1 || res2, 'hex');
 }
 exports.mnemonicToSeedSync = mnemonicToSeedSync;
 function mnemonicToSeed(mnemonic, password) {
@@ -51,12 +66,16 @@ function mnemonicToSeed(mnemonic, password) {
         try {
             const mnemonicBuffer = Buffer.from((mnemonic || '').normalize('NFKD'), 'utf8');
             const saltBuffer = Buffer.from(salt((password || '').normalize('NFKD')), 'utf8');
-            pbkdf2_1.pbkdf2(mnemonicBuffer, saltBuffer, 2048, 64, 'sha512', (err, data) => {
-                if (err)
-                    return reject(err);
-                else
-                    return resolve(data);
-            });
+            const res = toBuffer(CryptoJs.PBKDF2(toWordArray(mnemonicBuffer), toWordArray(saltBuffer), {
+                keySize: 512 / 32,
+                iterations: 2048,
+                hasher: CryptoJs.algo.SHA512,
+            }));
+            resolve(res);
+            // pbkdf2(mnemonicBuffer, saltBuffer, 2048, 64, 'sha512', (err, data) => {
+            //   if (err) return reject(err);
+            //   else return resolve(data);
+            // });
         }
         catch (error) {
             return reject(error);
